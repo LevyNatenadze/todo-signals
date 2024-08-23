@@ -2,6 +2,8 @@ import { Component, ElementRef, inject, input, OnChanges, OnInit, output, Simple
 import { TodoInterface } from '../../types/todo.interface';
 import { CommonModule } from '@angular/common';
 import { TodoService } from '../../services/todo.service';
+import { TodosFirebaseService } from '../../services/todos-firebase.service';
+import { tap } from 'rxjs';
 
 @Component({
   selector: 'app-todo',
@@ -14,6 +16,7 @@ export class TodoComponent implements OnInit, OnChanges {
   isEditing = input.required<boolean>();
   setEditingId = output<string | null>();
   todoService = inject(TodoService);
+  todoFirebaseService = inject(TodosFirebaseService);
   editingText: string = '';
 
   @ViewChild('inputText') inputText?: ElementRef;
@@ -36,8 +39,18 @@ export class TodoComponent implements OnInit, OnChanges {
   }
 
   changeTodo() {
-    this.todoService.editTodo(this.todo().id, this.editingText);
-    this.setEditingId.emit(null)
+    const dataToUpdate = {
+      text: this.editingText,
+      isCompleted: this.todo().isCompleted
+    }
+    this.todoFirebaseService.updateTodo(this.todo().id, dataToUpdate)
+    .pipe(
+      tap(() => {
+        this.todoService.editTodo(this.todo().id, this.editingText);
+      })
+    )
+    .subscribe()
+    this.setEditingId.emit(null) 
   }
  
   setTodoInEditMode() {
@@ -45,11 +58,20 @@ export class TodoComponent implements OnInit, OnChanges {
   }
 
   removeTodo() {
-    this.todoService.deleteTodo(this.todo().id);
+    this.todoFirebaseService.removeTodo(this.todo().id)
+    .pipe(
+      tap(() => this.todoService.deleteTodo(this.todo().id))
+    ).subscribe();
   }
 
   toggleTodo() {
-    this.todoService.toggleTodo(this.todo().id);
+    const dataToUpdate = {
+      text: this.todo().text,
+      isCompleted: !this.todo().isCompleted
+    };
+    this.todoFirebaseService.updateTodo(this.todo().id, dataToUpdate)
+    .pipe(tap(() => this.todoService.toggleTodo(this.todo().id)))
+    .subscribe();
   }
 
 

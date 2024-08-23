@@ -3,6 +3,8 @@ import { TodoService } from '../../services/todo.service';
 import { FilterEnum } from '../../types/filter.enum';
 import { TodoComponent } from '../todo/todo.component';
 import { CommonModule } from '@angular/common';
+import { TodosFirebaseService } from '../../services/todos-firebase.service';
+import { forkJoin, tap } from 'rxjs';
 
 @Component({
   selector: 'app-todos-main',
@@ -12,6 +14,7 @@ import { CommonModule } from '@angular/common';
 })
 export class MainComponent {
   todoService = inject(TodoService);
+  todoFirebaseService = inject(TodosFirebaseService);
   editingId: string | null = null;
   
   visibleTodos = computed(() => {
@@ -36,7 +39,15 @@ export class MainComponent {
 
   toggleAllTodos(event: Event) {
     const target = event.target as HTMLInputElement;
-    this.todoService.toggleAllTodos(target.checked);
+    const requests$ = this.todoService.todos().map((todo) => {
+      return this.todoFirebaseService.updateTodo(todo.id, {
+        text: todo.text,
+        isCompleted: target.checked
+      })
+    })
+    forkJoin(requests$)
+    .pipe(tap(() => this.todoService.toggleAllTodos(target.checked)))
+    .subscribe()
   }
 
 }

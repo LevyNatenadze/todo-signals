@@ -13,11 +13,11 @@ export class TodoService {
     this.filters.set(filterName);
   }
 
-  addTodo(text: string): void {
+  addTodo(text: string, addedTodoId: string): void {
     const newTodo: TodoInterface = {
       text,
       isCompleted: false,
-      id: Math.random().toString(16)
+      id: addedTodoId
     };
 
     this.todos.update((todos) => [...todos, newTodo]);
